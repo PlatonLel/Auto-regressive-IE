@@ -8,12 +8,16 @@ class GraphIEData(Dataset):
     def __init__(self, train_data, type="train", max_num_samples=5, mode="noshuffle"):
 
         self.type = type
+        self.mode = mode
         self.train_data = [i.values() for i in train_data]
         self.max_num_samples = max_num_samples
-        self.mode = mode
 
     def __len__(self):
         return len(self.train_data)
+    
+    def create_tokens(self, idx):
+        tokens = list(self.train_data[idx])[0]
+        return tokens, False, False, False
 
     def create_seq(self, idx):
         tokens, ner, rel, _ = self.train_data[idx]
@@ -156,9 +160,10 @@ class GraphIEData(Dataset):
     def __getitem__(self, idx):
         if self.type == "train":
             output = self.add_samples(idx, self.max_num_samples)
-        else:
+        elif self.type == 'eval':
             output = self.create_seq(idx)
-
+        else:
+            output = self.create_tokens(idx)
         tokens, _, _, seq = output
 
         if self.mode == "shuffle":

@@ -1,18 +1,45 @@
 import torch
-from metric import compute_prf
 from tqdm import tqdm
 
-
-class Evaluator:
+class Generate:
     def __init__(self, model, loader, decoding_function=None):
         self.model = model
         self.loader = loader
-
         self.decoding_function = decoding_function
+    
+    def use(self):
+        return self.generate(self.model, self.loader)
+    
+    @torch.no_grad()
+    def generate(self, model, loader):
 
-    def evaluate(self):
-        return self.evaluate_all_with_loader(self.model, self.loader)
+        model.eval()
+        all_outs = []
+        device = next(model.parameters()).device
+        for x in tqdm(loader, desc="Processing text"):
+            # Move input tensors to the device
+            for k, v in x.items():
+                if isinstance(v, torch.Tensor):
+                    x[k] = v.to(device)
+            if self.decoding_function is None:
+                out = model.decode_batch(x)
+            else:
+                out = self.decoding_function(model, x)
+            all_outs.extend(out)
 
+        return all_outs
+    
+    def transform_data(self, all_true, all_outs, symetric=False, exclude_type=False):
+        # extract entities and relations
+        all_outs_ent = []
+        all_outs_rel = []
+        for i in all_outs:
+            e, r = self.extract_entities_and_relations(i, symetric=symetric, exclude_type=exclude_type).values()
+            all_outs_ent.append(e)
+            all_outs_rel.append(r)
+
+        return all_outs_ent, all_outs_rel
+    
     @staticmethod
     def get_entities(output_seq):
         all_ents = []
@@ -48,6 +75,7 @@ class Evaluator:
                 relations.append([r_type, (head, tail)])
 
         return relations
+    
 
     def extract_entities_and_relations(self, input_seq, symetric, exclude_type):
         try:
@@ -61,81 +89,3 @@ class Evaluator:
             "relations_triples": relations_triples
         }
 
-    def transform_data(self, all_true, all_outs, symetric=False, exclude_type=False):
-        # extract entities and relations
-        all_true_ent = []
-        all_true_rel = []
-        all_outs_ent = []
-        all_outs_rel = []
-        for i, j in zip(all_true, all_outs):
-            e, r = self.extract_entities_and_relations(i, symetric=symetric, exclude_type=exclude_type).values()
-            all_true_ent.append(e)
-            all_true_rel.append(r)
-
-            e, r = self.extract_entities_and_relations(j, symetric=symetric, exclude_type=exclude_type).values()
-            all_outs_ent.append(e)
-            all_outs_rel.append(r)
-
-        return all_true_ent, all_true_rel, all_outs_ent, all_outs_rel
-
-    @torch.no_grad()
-    def generate(self, model, loader):
-
-        model.eval()
-        all_outs = []
-        all_true = []
-        device = next(model.parameters()).device
-        for x in tqdm(loader, desc="Decoding"):
-            # Move input tensors to the device
-            for k, v in x.items():
-                if isinstance(v, torch.Tensor):
-                    x[k] = v.to(device)
-            if self.decoding_function is None:
-                out = model.decode_batch(x)
-            else:
-                out = self.decoding_function(model, x)
-            all_outs.extend(out)
-            all_true.extend(x["graph"])
-
-        return all_true, all_outs
-
-    def evaluate_all_combinations(self, all_true, all_outs):
-
-        all_symetric = [False, True]
-        all_exclude_type = [False, True]
-
-        output = {}
-
-        for symetric in all_symetric:
-            for exclude_type in all_exclude_type:
-                all_true_ent, all_true_rel, all_outs_ent, all_outs_rel = self.transform_data(all_true, all_outs,
-                                                                                             symetric=symetric,
-                                                                                             exclude_type=exclude_type)
-                ent_eval = compute_prf(all_true_ent, all_outs_ent)
-                rel_eval = compute_prf(all_true_rel, all_outs_rel)
-
-                if exclude_type and symetric:
-                    name = "Relaxed + Symetric"
-                elif exclude_type and not symetric:
-                    name = "Relaxed + not Symetric"
-                elif not exclude_type and symetric:
-                    name = "Strict + Symetric"
-                else:
-                    name = "Strict + not Symetric"
-                output[f"{name}"] = rel_eval
-
-        output["Entity"] = ent_eval
-
-        # beautiful output string (aligned, formatted and with newlines)
-        output_str = ""
-        for k, v in output.items():
-            precision, recall, f1 = v.values()
-            output_str += f"{k}:\n"
-            # percentage
-            output_str += f"P: {precision:.2%}\tR: {recall:.2%}\tF1: {f1:.2%}\n"
-
-        return output, output_str
-
-    def evaluate_all_with_loader(self, model, loader):
-        all_true, all_outs = self.generate(model, loader)
-        return self.evaluate_all_combinations(all_true, all_outs)

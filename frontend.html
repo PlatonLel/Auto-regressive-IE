@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Information Extraction Model Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+        <h1 class="text-2xl font-bold mb-6 text-center">Information Extraction</h1>
+        <div id="input-form" class="space-y-4">
+            <div>
+                <label for="text-input" class="block text-sm font-medium text-gray-700">Input Text</label>
+                <div class="flex space-x-2">
+                    <textarea id="text-input" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" rows="4" placeholder="Enter text" required></textarea>
+                </div>
+                <div class="flex space-x-2">
+                    <button onclick="fillTestText()" class="mt-2 bg-green-600 text-white p-2 rounded-md hover:bg-green-700">Test</button>
+                    <button onclick="extract()" class="mt-2 flex-grow bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700">Extract</button>
+                </div>
+            </div>
+        </div>
+        <div id="result" class="mt-6 hidden">
+            <h2 class="text-lg font-semibold">Extraction Result</h2>
+            <p id="extraction-output" class="mt-2 text-gray-700"></p>
+            <button onclick="resetForm()" class="mt-4 w-full bg-gray-600 text-white p-2 rounded-md hover:bg-gray-700">Try Again</button>
+        </div>
+        <div id="error" class="mt-6 hidden">
+            <h2 class="text-lg font-semibold text-red-600">Error</h2>
+            <p id="error-message" class="mt-2 text-red-600"></p>
+            <button onclick="resetForm()" class="mt-4 w-full bg-gray-600 text-white p-2 rounded-md hover:bg-gray-700">Try Again</button>
+        </div>
+    </div>
+
+    <script>
+        // Configure the backend base URL 
+        const BASE_URL = window.location.origin || 'http://127.0.0.1:8000';
+
+        const testText = `Wonder Woman is a superheroine appearing in American comic books published by DC Comics. The character is a founding member of the Justice League. The character first appeared in "All Star Comics" #8 published October 21, 1941 with her first feature in "Sensation Comics" #1 in January 1942. The "Wonder Woman" title has been published by DC Comics almost continuously ever since. In her homeland, the island nation of Themyscira, her official title is Princess Diana of Themyscira. When blending into the society outside of her homeland, she sometimes adopts her civilian identity Diana Prince`;
+
+        function fillTestText() {
+            document.getElementById('text-input').value = testText;
+        }
+
+        async function extract() {
+            // Collect input value
+            const text = document.getElementById('text-input').value;
+
+            // Validate input
+            if (!text.trim()) {
+                showError('Please enter some text.');
+                return;
+            }
+
+            try {
+                // Log the request for debugging
+                console.log('Sending request with text:', text);
+
+                // Send request to FastAPI backend
+                const response = await fetch(`${BASE_URL}/extract`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sentence: text })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    console.log('Response received:', data);
+                    showResult(data.informationGraph);
+                } else {
+                    console.error('Error response:', data);
+                    showError(data.detail || 'An error occurred during extraction.');
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                showError('Failed to connect to the server. Please check if the backend is running.');
+            }
+        }
+
+        function showResult(result) {
+            document.getElementById('input-form').classList.add('hidden');
+            document.getElementById('result').classList.remove('hidden');
+            document.getElementById('extraction-output').textContent = result;
+        }
+
+        function showError(message) {
+            document.getElementById('input-form').classList.add('hidden');
+            document.getElementById('error').classList.remove('hidden');
+            document.getElementById('error-message').textContent = message;
+        }
+
+        function resetForm() {
+            document.getElementById('input-form').classList.remove('hidden');
+            document.getElementById('result').classList.add('hidden');
+            document.getElementById('error').classList.add('hidden');
+            document.getElementById('text-input').value = '';
+        }
+    </script>
+</body>
+</html>

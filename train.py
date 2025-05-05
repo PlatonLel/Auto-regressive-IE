@@ -7,7 +7,7 @@ import torch
 from tqdm import tqdm
 from transformers import get_linear_schedule_with_warmup
 
-from generate import Evaluator
+from evaluate import Evaluator
 from model import IeGenerator
 from preprocess import GraphIEData
 from save_load import save_model
@@ -15,12 +15,10 @@ from save_load import save_model
 # logging level
 logging.basicConfig(level=logging.INFO)
 
-
 def evaluate(model, eval_loader):
     model.eval()
     evaluator = Evaluator(model=model, loader=eval_loader)
     return evaluator.evaluate()
-
 
 def train(model, optimizer, train_data, eval_data,
           train_batch_size=32, eval_batch_size=32,
@@ -69,7 +67,6 @@ def train(model, optimizer, train_data, eval_data,
         try:
             loss = model(batch)
         except Exception as e:
-            print(e)
             continue
 
         loss = loss / grad_accumulation_steps
@@ -139,18 +136,18 @@ MODELS = {
 # #training_arguments
 def create_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_file', type=str, default='dataset/conll04.pkl')
+    parser.add_argument('--data_file', type=str, default='C:/Users/lelik/mine/ATG/model/dataset/redfm.pkl')
     parser.add_argument('--model_name', type=str, default='deberta')
     parser.add_argument('--max_width', type=int, default=14)
-    parser.add_argument('--num_prompts', type=int, default=32)
-    parser.add_argument('--hidden_transformer', type=int, default=1024)
-    parser.add_argument('--num_transformer_layers', type=int, default=24)
-    parser.add_argument('--attention_heads', type=int, default=16)
+    parser.add_argument('--num_prompts', type=int, default=5)
+    parser.add_argument('--hidden_transformer', type=int, default=256)
+    parser.add_argument('--num_transformer_layers', type=int, default=12)
+    parser.add_argument('--attention_heads', type=int, default=4)
     parser.add_argument('--span_mode', type=str, default='conv_share')
     parser.add_argument('--p_drop', type=float, default=0.1)
     parser.add_argument('--use_pos_code', type=bool, default=True)
     parser.add_argument('--n_epochs', type=int, default=1)
-    parser.add_argument('--n_steps', type=int, default=100000)
+    parser.add_argument('--n_steps', type=int, default=100)
     parser.add_argument('--batch_size', type=int, default=1)
     parser.add_argument('--eval_batch_size', type=int, default=1)
     parser.add_argument('--lr_encoder', type=float, default=1e-5)
@@ -158,7 +155,7 @@ def create_parser():
     parser.add_argument('--lr_others', type=float, default=1e-4)
     parser.add_argument('--warmup_ratio', type=float, default=0.1)
     parser.add_argument('--grad_accumulation_steps', type=int, default=1)
-    parser.add_argument('--save_interval', type=int, default=5000)
+    parser.add_argument('--save_interval', type=int, default=1)
     parser.add_argument('--max_num_samples', type=int, default=1)
     parser.add_argument('--log_dir', type=str, default="workspace/")
     parser.add_argument('--cross_attn', type=bool, default=True)

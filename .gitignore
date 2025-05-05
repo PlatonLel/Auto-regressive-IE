@@ -181,8 +181,14 @@ dataset/
 #Models
 models/
 
-#Yet another one stuff
+#Yet another stuff
 checklist.tar.gz
 dockerfile
 exp.ipynb
 checklist-0.0.11/
+poetry.lock
+pyproject.toml
+checkpoints/
+.python-version
+atg_docker
+docker-compose.yml

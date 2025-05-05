@@ -179,15 +179,3 @@ class TokenRep(nn.Module):
 #     print(out["original"][0].shape)
 #     print(out["original"][1].shape)
 #     print(out["original"][1])
-
-if __name__ == '__main__':
-    query_embedding = nn.Parameter(torch.randn(3, 2))
-    nn.init.uniform_(query_embedding, -0.01, 0.01)
-    query_embedding2 = nn.Parameter(torch.randn(3, 2))
-    nn.init.uniform_(query_embedding2, -0.01, 0.01)
-    # print(torch.cat([query_embedding, query_embedding2], dim=0))
-    tokens = ["This is a test", "This is another testhjfkf fhjzfhryb"]
-    sentences = [Sentence(i) for i in tokens]
-    input_ids = torch.Tensor([[1,2,3],[1,2,3]])
-    print(input_ids)
-    print(query_embedding.unsqueeze(0).repeat(input_ids.size(0), 1, 1))
