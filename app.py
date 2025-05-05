@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -11,8 +11,23 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        model = load_model("checkpoints/best_checkpoint.pt")
+        model.eval()
+        app.model = model
+        logger.info("Model loaded successfully from checkpoints/best_model.pt")
+    except Exception as e:
+        logger.error(f"Error loading model: {e}")
+        raise
+    yield
+    app.model = None
+    logger.info("Model unloaded during shutdown")
+
+
+app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  
@@ -21,24 +36,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-model = None
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    global model
-    try:
-        model = load_model("checkpoints/best_checkpoint.pt")
-        model.eval()
-        logger.info("Model loaded successfully from checkpoints/best_model.pt")
-    except Exception as e:
-        logger.error(f"Error loading model: {e}")
-        raise
-    yield
-    model = None
-    logger.info("Model unloaded during shutdown")
 
 class Input(BaseModel):
     sentence: str
+
 
 @app.get("/", response_class=HTMLResponse)
 async def get_interface():
@@ -49,8 +50,10 @@ async def get_interface():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error loading frontend: {e}")
 
+
 @app.post("/extract")
-async def use_model(input: Input):
+async def use_model(input: Input, request: Request):
+    model = request.app.model
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded yet")
     try:
