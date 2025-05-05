@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from usage import usage
 from save_load import load_model
@@ -22,16 +23,19 @@ app.add_middleware(
 
 model = None
 
-@app.lifespan("startup")
-async def load_model():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     global model
-try:
-    model = load_model("checkpoints/best_checkpoint.pt")
-    model.eval()
-    logger.info("Model loaded successfully from checkpoints/best_model.pt")
-except Exception as e:
-    logger.error(f"Error loading model: {e}")
-    raise
+    try:
+        model = load_model("checkpoints/best_checkpoint.pt")
+        model.eval()
+        logger.info("Model loaded successfully from checkpoints/best_model.pt")
+    except Exception as e:
+        logger.error(f"Error loading model: {e}")
+        raise
+    yield
+    model = None
+    logger.info("Model unloaded during shutdown")
 
 class Input(BaseModel):
     sentence: str
