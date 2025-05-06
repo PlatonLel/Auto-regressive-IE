@@ -1,0 +1,8 @@
+version: '3.7'
+services:
+  app:
+    container_name: atg-container
+    image: cr.yandex/crpmvmtj1v9p8g7841h0/atg-image:latest
+    ports:
+      - "8000:8000"
+    restart: always
