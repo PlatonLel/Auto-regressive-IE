@@ -185,11 +185,11 @@ models/
 checklist.tar.gz
 exp.ipynb
 checklist-0.0.11/
-poetry.lock
-pyproject.toml
 checkpoints/
 .python-version
 atg_docker
 [backend
+frontend.html
+app.py
 
 
